@@ -1,42 +1,191 @@
-{
-  "board": {
-    "name": "Carholina Launch Board",
-    "lists": [
-      {
-        "name": "Backlog",
-        "cards": [
-          {
-            "name": "Исследование рынка",
-            "desc": "Анализ конкурентов и определение целевых сегментов.",
-            "checklists": [
-              {
-                "name": "Шаги",
-                "items": ["Собрать данные конкурентов", "Оценить спрос", "Подготовить отчёт"]
-              }
-            ]
-          },
-          {
-            "name": "Финансовая модель",
-            "desc": "Подготовить бюджет и прогноз затрат."
-          }
-        ]
-      },
-      {
-        "name": "In Progress",
-        "cards": [
-          {
-            "name": "Разработка API интеграции",
-            "desc": "Настройка связки с Trello и внешними сервисами."
-          }
-        ]
-      },
-      {
-        "name": "Done",
-        "cards": []
-      }
-    ]
-  }
-}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Carholina OneClick</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f9fafc;
+    }
+    h1 { color: #0a4d8c; }
+    button {
+      background: #0a4d8c;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 6px;
+    }
+    button:hover { background: #06345d; }
+    #log {
+      margin-top: 20px;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Carholina OneClick Setup</h1>
+  <p>Нажмите «Авторизоваться», затем «Развернуть доску».</p>
+  <button id="authBtn">Авторизоваться</button>
+  <button id="createBtn" disabled>Развернуть доску</button>
+  <button id="logoutBtn">Выйти (сбросить токен)</button>
+  <p id="status">Статус: ожидает авторизации…</p>
+  <div id="log">ℹ️ Лог действий появится здесь…</div>
 
-  }
-}
+  <script>
+    const API_KEY = "f0459a9c4c84226e29b03e7d047b9dfb";
+    const BOARD_JSON_URL = "https://khasanovshekhroz33-netizen.github.io/carholina-trello-powerup/Carholina_Trello_Board.json";
+
+    const authBtn = document.getElementById("authBtn");
+    const createBtn = document.getElementById("createBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("log");
+
+    const log = (msg) => { logEl.textContent += msg + "\n"; logEl.scrollTop = logEl.scrollHeight; };
+    const setStatus = (msg) => { statusEl.textContent = "Статус: " + msg; };
+
+    const TOKEN_KEY = "trello_token_carholina";
+    const getToken  = () => localStorage.getItem(TOKEN_KEY);
+    const setToken  = (t) => localStorage.setItem(TOKEN_KEY, t);
+    const clearToken= () => localStorage.removeItem(TOKEN_KEY);
+
+    function extractTokenFromHash() {
+      if (!location.hash) return null;
+      const m = location.hash.match(/token=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    function scrubHash() {
+      if (history.replaceState) {
+        history.replaceState(null, document.title, location.pathname + location.search);
+      } else {
+        location.hash = "";
+      }
+    }
+
+    function buildAuthorizeUrl() {
+      const returnUrl = location.origin + location.pathname;
+      const params = new URLSearchParams({
+        expiration: "never",
+        name: "CarholinaApp",
+        scope: "read,write",
+        response_type: "token",
+        key: API_KEY,
+        return_url: returnUrl
+      });
+      return `https://trello.com/1/authorize?${params.toString()}`;
+    }
+
+    function authorize() {
+      location.href = buildAuthorizeUrl();
+    }
+
+    function logout() {
+      clearToken();
+      createBtn.disabled = true;
+      setStatus("токен удалён; авторизуйтесь заново");
+      log("ℹ️ Токен удалён из localStorage.");
+    }
+
+    async function req(url, options) {
+      const res = await fetch(url, options);
+      let data = null;
+      try { data = await res.json(); } catch(_) {}
+      if (!res.ok) {
+        const msg = data && (data.message || data.error) ? (data.message || data.error) : res.status + " " + res.statusText;
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    async function createBoard() {
+      const token = getToken();
+      if (!token) {
+        setStatus("нет токена — авторизуйтесь");
+        log("❌ Нет токена. Нажмите «Авторизоваться».");
+        return;
+      }
+
+      try {
+        setStatus("загрузка шаблона…");
+        log("📥 Загружаем JSON шаблон…");
+        const templateRes = await fetch(BOARD_JSON_URL);
+        const template = await templateRes.json();
+
+        setStatus("создание доски…");
+        log("⏳ Создаём доску…");
+
+        const createBoardUrl = `https://api.trello.com/1/boards/?name=${encodeURIComponent(template.board.name)}&defaultLists=false&key=${API_KEY}&token=${token}`;
+        const board = await req(createBoardUrl, { method: "POST" });
+        log("✅ Доска создана: " + (board.url || board.id));
+
+        for (const list of template.board.lists) {
+          const createListUrl = `https://api.trello.com/1/lists?name=${encodeURIComponent(list.name)}&idBoard=${board.id}&key=${API_KEY}&token=${token}`;
+          const listRes = await req(createListUrl, { method: "POST" });
+          log("  ➕ Список: " + list.name);
+
+          if (list.cards) {
+            for (const card of list.cards) {
+              const createCardUrl = `https://api.trello.com/1/cards?idList=${listRes.id}&name=${encodeURIComponent(card.name)}&desc=${encodeURIComponent(card.desc || "")}&key=${API_KEY}&token=${token}`;
+              const cardRes = await req(createCardUrl, { method: "POST" });
+              log("    📝 Карточка: " + card.name);
+
+              if (card.checklists) {
+                for (const checklist of card.checklists) {
+                  const createChecklistUrl = `https://api.trello.com/1/cards/${cardRes.id}/checklists?name=${encodeURIComponent(checklist.name)}&key=${API_KEY}&token=${token}`;
+                  const checklistRes = await req(createChecklistUrl, { method: "POST" });
+                  for (const item of checklist.items) {
+                    await req(`https://api.trello.com/1/checklists/${checklistRes.id}/checkItems?name=${encodeURIComponent(item)}&key=${API_KEY}&token=${token}`, { method: "POST" });
+                  }
+                  log("      ✅ Чек-лист: " + checklist.name);
+                }
+              }
+            }
+          }
+        }
+
+        setStatus("готово — открываю доску");
+        log("🚀 Открываю доску…");
+        window.open(board.url, "_blank");
+      } catch (err) {
+        setStatus("ошибка");
+        log("❌ Ошибка: " + (err && err.message ? err.message : err));
+        alert("Ошибка при создании доски: " + (err && err.message ? err.message : err));
+      }
+    }
+
+    (function init() {
+      const tokenFromHash = extractTokenFromHash();
+      if (tokenFromHash) {
+        setToken(tokenFromHash);
+        scrubHash();
+        log("🔐 Токен получен и сохранён.");
+      }
+
+      if (getToken()) {
+        createBtn.disabled = false;
+        setStatus("авторизация есть — можно развернуть доску");
+      } else {
+        createBtn.disabled = true;
+        setStatus("ожидает авторизации…");
+      }
+
+      authBtn.addEventListener("click", authorize);
+      createBtn.addEventListener("click", createBoard);
+      logoutBtn.addEventListener("click", logout);
+    })();
+  </script>
+</body>
+</html>
