@@ -1,1 +1,30 @@
-<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><style type="text/css">ol{margin:0;padding:0}table td,table th{padding:0}.c0{color:#000000;font-weight:400;text-decoration:none;vertical-align:baseline;font-size:11pt;font-family:"Arial";font-style:normal}.c1{padding-top:0pt;padding-bottom:0pt;line-height:1.15;orphans:2;widows:2;text-align:left}.c2{background-color:#ffffff;max-width:468pt;padding:72pt 72pt 72pt 72pt}.c3{height:11pt}.title{padding-top:0pt;color:#000000;font-size:26pt;padding-bottom:3pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}.subtitle{padding-top:0pt;color:#666666;font-size:15pt;padding-bottom:16pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}li{color:#000000;font-size:11pt;font-family:"Arial"}p{margin:0;color:#000000;font-size:11pt;font-family:"Arial"}h1{padding-top:20pt;color:#000000;font-size:20pt;padding-bottom:6pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h2{padding-top:18pt;color:#000000;font-size:16pt;padding-bottom:6pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h3{padding-top:16pt;color:#434343;font-size:14pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h4{padding-top:14pt;color:#666666;font-size:12pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h5{padding-top:12pt;color:#666666;font-size:11pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;orphans:2;widows:2;text-align:left}h6{padding-top:12pt;color:#666666;font-size:11pt;padding-bottom:4pt;font-family:"Arial";line-height:1.15;page-break-after:avoid;font-style:italic;orphans:2;widows:2;text-align:left}</style></head><body class="c2 doc-content"><p class="c1"><span class="c0">&lt;!DOCTYPE html&gt;</span></p><p class="c1"><span class="c0">&lt;html&gt;</span></p><p class="c1"><span class="c0">&lt;head&gt;</span></p><p class="c1"><span class="c0">&nbsp; &lt;meta charset=&quot;utf-8&quot;&gt;</span></p><p class="c1"><span class="c0">&nbsp; &lt;title&gt;Carholina Trello Power-Up&lt;/title&gt;</span></p><p class="c1"><span class="c0">&nbsp; &lt;!-- &#1054;&#1092;&#1080;&#1094;&#1080;&#1072;&#1083;&#1100;&#1085;&#1099;&#1081; SDK Trello --&gt;</span></p><p class="c1"><span class="c0">&nbsp; &lt;script src=&quot;https://p.trellocdn.com/power-up.min.js&quot;&gt;&lt;/script&gt;</span></p><p class="c1"><span class="c0">&lt;/head&gt;</span></p><p class="c1"><span class="c0">&lt;body&gt;</span></p><p class="c1"><span class="c0">&lt;script&gt;</span></p><p class="c1"><span class="c0">// &#1048;&#1085;&#1080;&#1094;&#1080;&#1072;&#1083;&#1080;&#1079;&#1072;&#1094;&#1080;&#1103; Power-Up</span></p><p class="c1"><span class="c0">var t = window.TrelloPowerUp.iframe();</span></p><p class="c1 c3"><span class="c0"></span></p><p class="c1"><span class="c0">// &#1056;&#1077;&#1075;&#1080;&#1089;&#1090;&#1088;&#1080;&#1088;&#1091;&#1077;&#1084; &#1082;&#1085;&#1086;&#1087;&#1082;&#1091; &#1085;&#1072; &#1076;&#1086;&#1089;&#1082;&#1077;</span></p><p class="c1"><span class="c0">window.TrelloPowerUp.initialize({</span></p><p class="c1"><span class="c0">&nbsp; &#39;board-buttons&#39;: function(t, options) {</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; return [{</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; icon: &#39;https://cdn-icons-png.flaticon.com/512/3208/3208710.png&#39;, // &#1083;&#1102;&#1073;&#1072;&#1103; &#1080;&#1082;&#1086;&#1085;&#1082;&#1072;</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; text: &#39;&#1057;&#1086;&#1079;&#1076;&#1072;&#1090;&#1100; Carholina &#1076;&#1086;&#1089;&#1082;&#1091;&#39;,</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; callback: function(t) {</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; &nbsp; // &#128073; &#1079;&#1076;&#1077;&#1089;&#1100; &#1084;&#1086;&#1078;&#1085;&#1086; &#1074;&#1089;&#1090;&#1072;&#1074;&#1080;&#1090;&#1100; &#1074;&#1099;&#1079;&#1086;&#1074; API &#1080;&#1083;&#1080; &#1089;&#1089;&#1099;&#1083;&#1082;&#1091; &#1085;&#1072; OneClick-&#1089;&#1090;&#1088;&#1072;&#1085;&#1080;&#1094;&#1091;</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; &nbsp; window.open(&quot;https://example.com/Carholina_Trello_OneClick.html&quot;, &quot;_blank&quot;);</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; &nbsp; return t.closePopup();</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; &nbsp; }</span></p><p class="c1"><span class="c0">&nbsp; &nbsp; }];</span></p><p class="c1"><span class="c0">&nbsp; }</span></p><p class="c1"><span class="c0">});</span></p><p class="c1"><span class="c0">&lt;/script&gt;</span></p><p class="c1"><span class="c0">&lt;/body&gt;</span></p><p class="c1"><span class="c0">&lt;/html&gt;</span></p><p class="c1 c3"><span class="c0"></span></p><p class="c1 c3"><span class="c0"></span></p></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Carholina Trello Power-Up</title>
+  <!-- Официальный SDK Trello -->
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+<script>
+// Инициализация Power-Up
+var t = window.TrelloPowerUp.iframe();
+
+// Регистрируем кнопку на доске
+window.TrelloPowerUp.initialize({
+  'board-buttons': function(t, options) {
+    return [{
+      icon: 'https://cdn-icons-png.flaticon.com/512/3208/3208710.png', // иконка кнопки
+      text: 'Создать Carholina доску',
+      callback: function(t) {
+        // 👉 теперь открывает вашу страницу на GitHub Pages
+        window.open("https://khasanovshekhroz33-netizen.github.io/carholina-trello-powerup/Carholina_Trello_OneClick.html", "_blank");
+        return t.closePopup();
+      }
+    }];
+  }
+});
+</script>
+</body>
+</html>
