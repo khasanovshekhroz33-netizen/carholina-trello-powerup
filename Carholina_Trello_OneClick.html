@@ -1,1 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Carholina OneClick</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { --primary:#0a4d8c; --bg:#f9fafc; }
+    body { font-family: Arial, sans-serif; margin: 40px; background: var(--bg); color:#111; }
+    h1 { color: var(--primary); margin-top: 0; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    button {
+      background: var(--primary); color: #fff; border: none;
+      padding: 12px 16px; border-radius: 8px; font-size: 15px; cursor: pointer;
+    }
+    button.secondary { background:#e5e7eb; color:#111; }
+    button:hover { filter:brightness(0.95); }
+    .card {
+      background:#fff; border-radius:12px; padding:18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,.06);
+      max-width: 780px;
+    }
+    .muted { color:#555; font-size:14px; }
+    #log { white-space:pre-wrap; background:#0a0a0a; color:#d8ffd8; padding:12px; border-radius:8px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; max-height:260px; overflow:auto; }
+    a { color: var(--primary); text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Carholina OneClick Setup</h1>
+    <p class="muted">
+      Нажмите «Авторизоваться», затем «Создать доску». Токен сохранится в браузере (localStorage) и не хранится в коде.
+    </p>
+
+    <div class="row" style="margin:12px 0 6px;">
+      <button id="authBtn">Авторизоваться</button>
+      <button id="createBtn" disabled>Создать доску Carholina</button>
+      <button id="logoutBtn" class="secondary">Выйти (сбросить токен)</button>
+    </div>
+
+    <p id="status" class="muted" style="margin:8px 0 14px;">Статус: ожидает авторизации…</p>
+    <div id="log" aria-live="polite"></div>
+
+    <p class="muted" style="margin-top:16px">
+      Поддержка: <a href="mailto:KHASANOVSHEKHROZ33@GMAIL.COM">KHASANOVSHEKHROZ33@GMAIL.COM</a>
+    </p>
+  </div>
+
+  <script>
+    "use strict";
+
+    // 🔑 Ваш публичный API Key (его можно хранить в клиенте)
+    const API_KEY = "f0459a9c4c84226e29b03e7d047b9dfb";
+
+    // ⚙️ Настройки шаблона доски
+    const BOARD_NAME = "Carholina MVP";
+    const LISTS = ["To Do", "In Progress", "Done", "Features"];
+
+    // 🧭 Элементы UI
+    const authBtn   = document.getElementById("authBtn");
+    const createBtn = document.getElementById("createBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const statusEl  = document.getElementById("status");
+    const logEl     = document.getElementById("log");
+
+    // 🧰 Утилиты
+    const log = (msg) => { logEl.textContent += msg + "\n"; logEl.scrollTop = logEl.scrollHeight; };
+    const setStatus = (msg) => { statusEl.textContent = "Статус: " + msg; };
+
+    // 🧷 Работа с токеном
+    const TOKEN_KEY = "trello_token_carholina";
+    const getToken  = () => localStorage.getItem(TOKEN_KEY);
+    const setToken  = (t) => localStorage.setItem(TOKEN_KEY, t);
+    const clearToken= () => localStorage.removeItem(TOKEN_KEY);
+
+    // 🧩 Извлечь token из фрагмента URL (после авторизации)
+    function extractTokenFromHash() {
+      if (!location.hash) return null;
+      // Пример: #token=XXXXX
+      const m = location.hash.match(/token=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+
+    // 🧼 Убрать токен из адресной строки (косметика)
+    function scrubHash() {
+      if (history.replaceState) {
+        history.replaceState(null, document.title, location.pathname + location.search);
+      } else {
+        location.hash = "";
+      }
+    }
+
+    // 🔐 Сформировать ссылку авторизации Trello, которая вернёт токен на эту же страницу
+    function buildAuthorizeUrl() {
+      // ВАЖНО: ваш домен должен быть в Trello ➜ Allowed origins
+      const returnUrl = location.origin + location.pathname;
+      const params = new URLSearchParams({
+        expiration: "never",
+        name: "CarholinaApp",
+        scope: "read,write",
+        response_type: "token",
+        key: API_KEY,
+        return_url: returnUrl
+      });
+      return `https://trello.com/1/authorize?${params.toString()}`;
+    }
+
+    // 🔓 Авторизация
+    function authorize() {
+      const url = buildAuthorizeUrl();
+      // открываем в этом же окне — так безопаснее и проще получить token через return_url
+      location.href = url;
+    }
+
+    // 🧹 Выход
+    function logout() {
+      clearToken();
+      createBtn.disabled = true;
+      setStatus("токен удалён; авторизуйтесь заново");
+      log("ℹ️ Токен удалён из localStorage.");
+    }
+
+    // 🧾 Обёртка fetch с обработкой ошибок
+    async function req(url, options) {
+      const res = await fetch(url, options);
+      let data = null;
+      try { data = await res.json(); } catch(_) {}
+      if (!res.ok) {
+        const msg = data && (data.message || data.error) ? (data.message || data.error) : res.status + " " + res.statusText;
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    // 🛠 Создание доски и списков
+    async function createBoard() {
+      const token = getToken();
+      if (!token) {
+        setStatus("нет токена — авторизуйтесь");
+        log("❌ Нет токена. Нажмите «Авторизоваться».");
+        return;
+      }
+
+      try {
+        setStatus("создание доски…");
+        log("⏳ Создаём доску…");
+
+        // 1) Создаём пустую доску без стандартных списков
+        const createBoardUrl = `https://api.trello.com/1/boards/?name=${encodeURIComponent(BOARD_NAME)}&defaultLists=false&key=${API_KEY}&token=${token}`;
+        const board = await req(createBoardUrl, { method: "POST" });
+        log("✅ Доска создана: " + (board.url || board.id));
+
+        // 2) Создаём списки
+        for (const listName of LISTS) {
+          const createListUrl = `https://api.trello.com/1/lists?name=${encodeURIComponent(listName)}&idBoard=${board.id}&key=${API_KEY}&token=${token}`;
+          await req(createListUrl, { method: "POST" });
+          log("  ➕ Список добавлен: " + listName);
+        }
+
+        setStatus("готово — открываю доску");
+        log("🚀 Открываю доску…");
+        window.open(board.url, "_blank");
+      } catch (err) {
+        setStatus("ошибка");
+        log("❌ Ошибка: " + (err && err.message ? err.message : err));
+        alert("Ошибка при создании доски: " + (err && err.message ? err.message : err));
+      }
+    }
+
+    // 🔄 Инициализация страницы
+    (function init() {
+      // Если Trello вернул token в URL-хэше после авторизации — захватим его
+      const tokenFromHash = extractTokenFromHash();
+      if (tokenFromHash) {
+        setToken(tokenFromHash);
+        scrubHash();
+        log("🔐 Токен получен и сохранён в браузере.");
+      }
+
+      // Восстановим доступность кнопок
+      if (getToken()) {
+        createBtn.disabled = false;
+        setStatus("авторизация есть — можно создавать доску");
+      } else {
+        createBtn.disabled = true;
+        setStatus("ожидает авторизации…");
+      }
+
+      // Навесим обработчики
+      authBtn.addEventListener("click", authorize);
+      createBtn.addEventListener("click", createBoard);
+      logoutBtn.addEventListener("click", logout);
+
+      log("ℹ️ Если при авторизации видите ошибку возврата — проверьте Trello ➜ Allowed origins и добавьте:");
+      log("   " + location.origin);
+    })();
+  </script>
+</body>
+</html>
 
