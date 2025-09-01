@@ -2,97 +2,156 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Carholina OneClick</title>
+  <title>Carholina OneClick Setup</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; background: #f9fafc; }
     h1 { color: #0a4d8c; }
     button {
       background: #0a4d8c; color: white; border: none;
-      padding: 12px 20px; border-radius: 6px; font-size: 16px;
-      cursor: pointer; margin: 5px;
+      padding: 12px 20px; border-radius: 6px; font-size: 16px; cursor: pointer;
+      margin: 5px;
     }
     button:hover { background: #06345d; }
-    #log {
-      margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc;
-      border-radius: 6px; height: 200px; overflow-y: auto;
-      font-family: monospace; font-size: 13px; white-space: pre-line;
+    pre {
+      background: #eee; padding: 10px; border-radius: 6px;
+      max-height: 300px; overflow-y: auto;
     }
   </style>
 </head>
 <body>
   <h1>Carholina OneClick Setup</h1>
-  <p>Нажмите «Авторизоваться», затем «Создать доску». Токен сохранится в браузере.</p>
+  <p>Нажмите «Авторизоваться», затем «Создать доску». Токен сохранится в браузере (localStorage) и не хранится в коде.</p>
+
   <button id="authBtn">Авторизоваться</button>
   <button id="createBtn" disabled>Создать доску Carholina</button>
   <button id="logoutBtn">Выйти (сбросить токен)</button>
+
   <p id="status">Статус: ожидает авторизации…</p>
-  <div id="log">ℹ️ Лог действий появится здесь…</div>
+  <pre id="log">ℹ️ Лог действий появится здесь…</pre>
 
-<script>
-  const API_KEY   = "f0459a9c4c84226e29b03e7d047b9dfb";
-  const BOARD_NAME= "Carholina MVP";
-  const LISTS     = ["To Do", "In Progress", "Done", "Features"];
+  <script>
+    const API_KEY = "f0459a9c4c84226e29b03e7d047b9dfb";
+    const BOARD_NAME = "Carholina MVP";
+    const LISTS = ["To Do", "In Progress", "Done", "Features"];
 
-  const logEl=document.getElementById("log"),statusEl=document.getElementById("status"),
-        authBtn=document.getElementById("authBtn"),createBtn=document.getElementById("createBtn"),
-        logoutBtn=document.getElementById("logoutBtn");
-  const log=(m)=>{logEl.textContent+=m+"\n";logEl.scrollTop=logEl.scrollHeight;};
-  const setStatus=(m)=>{statusEl.textContent="Статус: "+m;};
+    const authBtn   = document.getElementById("authBtn");
+    const createBtn = document.getElementById("createBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const statusEl  = document.getElementById("status");
+    const logEl     = document.getElementById("log");
 
-  const TOKEN_KEY="trello_token_carholina";
-  const getToken=()=>localStorage.getItem(TOKEN_KEY);
-  const setToken=(t)=>localStorage.setItem(TOKEN_KEY,t);
-  const clearToken=()=>localStorage.removeItem(TOKEN_KEY);
+    const log = (msg) => { logEl.textContent += msg + "\n"; logEl.scrollTop = logEl.scrollHeight; };
+    const setStatus = (msg) => { statusEl.textContent = "Статус: " + msg; };
 
-  function extractTokenFromHash(){if(!location.hash)return null;const m=location.hash.match(/token=([^&]+)/);return m?decodeURIComponent(m[1]):null;}
-  function scrubHash(){if(history.replaceState)history.replaceState(null,document.title,location.pathname+location.search);else location.hash="";}
-  function buildAuthorizeUrl(){const returnUrl=location.origin+location.pathname;const params=new URLSearchParams({expiration:"never",name:"CarholinaApp",scope:"read,write",response_type:"token",key:API_KEY,return_url:returnUrl});return `https://trello.com/1/authorize?${params.toString()}`;}
-  function authorize(){location.href=buildAuthorizeUrl();}
-  function logout(){clearToken();createBtn.disabled=true;setStatus("токен удалён; авторизуйтесь заново");log("ℹ️ Токен удалён.");}
+    const TOKEN_KEY = "trello_token_carholina";
+    const getToken  = () => localStorage.getItem(TOKEN_KEY);
+    const setToken  = (t) => localStorage.setItem(TOKEN_KEY, t);
+    const clearToken= () => localStorage.removeItem(TOKEN_KEY);
 
-  async function req(url,opt){const r=await fetch(url,opt);let d=null;try{d=await r.json();}catch{}if(!r.ok){throw new Error((d&&(d.message||d.error))||r.status+" "+r.statusText);}return d;}
+    function extractTokenFromHash() {
+      if (!location.hash) return null;
+      const m = location.hash.match(/token=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    }
+    function scrubHash() {
+      if (history.replaceState) history.replaceState(null, document.title, location.pathname + location.search);
+      else location.hash = "";
+    }
+    function buildAuthorizeUrl() {
+      const returnUrl = location.origin + location.pathname;
+      const params = new URLSearchParams({
+        expiration: "never", name: "CarholinaApp", scope: "read,write",
+        response_type: "token", key: API_KEY, return_url: returnUrl
+      });
+      return `https://trello.com/1/authorize?${params.toString()}`;
+    }
+    function authorize() { location.href = buildAuthorizeUrl(); }
+    function logout() { clearToken(); createBtn.disabled = true; setStatus("токен удалён; авторизуйтесь заново"); log("ℹ️ Токен удалён."); }
 
-  async function createBoard(){
-    const token=getToken(); if(!token){setStatus("нет токена — авторизуйтесь");log("❌ Нет токена.");return;}
-    try{
-      setStatus("создание доски…");log("⏳ Создаём доску…");
-      const board=await req(`https://api.trello.com/1/boards/?name=${encodeURIComponent(BOARD_NAME)}&defaultLists=false&key=${API_KEY}&token=${token}`,{method:"POST"});
-      log("✅ Доска создана: "+board.url);
+    async function req(url, options) {
+      const res = await fetch(url, options);
+      let data = null; try { data = await res.json(); } catch(_) {}
+      if (!res.ok) throw new Error(data && (data.message || data.error) ? (data.message || data.error) : res.status + " " + res.statusText);
+      return data;
+    }
 
-      // списки
-      for(const l of LISTS){await req(`https://api.trello.com/1/lists?name=${encodeURIComponent(l)}&idBoard=${board.id}&key=${API_KEY}&token=${token}`,{method:"POST"});log("➕ Список: "+l);}
-      // метки
-      const labels=[{name:"В пути",color:"yellow"},{name:"Завершено",color:"green"},{name:"Срочно",color:"red"}];
-      for(const lbl of labels){await req(`https://api.trello.com/1/labels?name=${encodeURIComponent(lbl.name)}&color=${lbl.color}&idBoard=${board.id}&key=${API_KEY}&token=${token}`,{method:"POST"});log("🏷 Метка: "+lbl.name);}
-      // карточки с чеклистами
-      const listsData=await req(`https://api.trello.com/1/boards/${board.id}/lists?key=${API_KEY}&token=${token}`);
-      const cards=[
-        {name:"🚗 Новая заявка",list:"To Do",check:["Получить документы","Назначить водителя","Подтвердить маршрут"]},
-        {name:"📦 В пути",list:"In Progress",label:"В пути",check:["Проверить трекер","Связаться с клиентом"]},
-        {name:"✅ Завершено",list:"Done",label:"Завершено",check:["Закрыть заказ","Отправить отчёт"]},
-      ];
-      for(const c of cards){
-        const list=listsData.find(l=>l.name===c.list); if(!list)continue;
-        let cardUrl=`https://api.trello.com/1/cards?name=${encodeURIComponent(c.name)}&idList=${list.id}&key=${API_KEY}&token=${token}`;
-        let newCard=await req(cardUrl,{method:"POST"});
-        log("📝 Карточка: "+c.name);
-        if(c.check&&c.check.length){
-          const checklist=await req(`https://api.trello.com/1/cards/${newCard.id}/checklists?name=Чеклист&key=${API_KEY}&token=${token}`,{method:"POST"});
-          for(const item of c.check){
-            await req(`https://api.trello.com/1/checklists/${checklist.id}/checkItems?name=${encodeURIComponent(item)}&key=${API_KEY}&token=${token}`,{method:"POST"});
-            log("   ☑️ "+item);
+    async function createBoard() {
+      const token = getToken();
+      if (!token) { setStatus("нет токена — авторизуйтесь"); log("❌ Нет токена."); return; }
+
+      try {
+        setStatus("создание доски…");
+        log("⏳ Создаём доску…");
+        const createBoardUrl = `https://api.trello.com/1/boards/?name=${encodeURIComponent(BOARD_NAME)}&defaultLists=false&key=${API_KEY}&token=${token}`;
+        const board = await req(createBoardUrl, { method: "POST" });
+        log("✅ Доска создана: " + board.url);
+
+        // списки
+        for (const listName of LISTS) {
+          await req(`https://api.trello.com/1/lists?name=${encodeURIComponent(listName)}&idBoard=${board.id}&key=${API_KEY}&token=${token}`, { method: "POST" });
+          log("  ➕ Список: " + listName);
+        }
+
+        // метки
+        const labels = [
+          { name: "В пути", color: "yellow" },
+          { name: "Завершено", color: "green" },
+          { name: "Срочно", color: "red" }
+        ];
+        for (const lbl of labels) {
+          await req(`https://api.trello.com/1/labels?name=${encodeURIComponent(lbl.name)}&color=${lbl.color}&idBoard=${board.id}&key=${API_KEY}&token=${token}`, { method: "POST" });
+          log("🏷 Метка: " + lbl.name);
+        }
+
+        // получаем списки и участников
+        const listsData = await req(`https://api.trello.com/1/boards/${board.id}/lists?key=${API_KEY}&token=${token}`);
+        const members   = await req(`https://api.trello.com/1/boards/${board.id}/members?key=${API_KEY}&token=${token}`);
+        const me = members[0];
+
+        // карточки-шаблоны
+        const cards = [
+          {name:"🚗 Новая заявка",list:"To Do",check:["Получить документы","Назначить водителя","Подтвердить маршрут"]},
+          {name:"📦 В пути",list:"In Progress",label:"В пути",check:["Проверить трекер","Связаться с клиентом"]},
+          {name:"✅ Доставка завершена",list:"Done",label:"Завершено",check:["Закрыть заказ","Отправить отчёт"]},
+        ];
+
+        for(const c of cards){
+          const list=listsData.find(l=>l.name===c.list);
+          if(!list) continue;
+
+          let cardUrl = `https://api.trello.com/1/cards?name=${encodeURIComponent(c.name)}&idList=${list.id}&idMembers=${me.id}&key=${API_KEY}&token=${token}`;
+          let newCard = await req(cardUrl, { method: "POST" });
+          log("📝 Карточка: "+c.name+" (назначен: "+me.fullName+")");
+
+          if(c.check && c.check.length){
+            const checklist = await req(`https://api.trello.com/1/cards/${newCard.id}/checklists?name=Чеклист&key=${API_KEY}&token=${token}`, { method:"POST" });
+            for(const item of c.check){
+              await req(`https://api.trello.com/1/checklists/${checklist.id}/checkItems?name=${encodeURIComponent(item)}&key=${API_KEY}&token=${token}`, { method:"POST" });
+              log("   ☑️ "+item);
+            }
           }
         }
-      }
-      setStatus("готово — открываю доску");log("🚀 Открываю доску…");window.open(board.url,"_blank");
-    }catch(e){setStatus("ошибка");log("❌ "+e.message);alert("Ошибка: "+e.message);}
-  }
 
-  (function init(){
-    const t=extractTokenFromHash(); if(t){setToken(t);scrubHash();log("🔐 Токен сохранён.");}
-    if(getToken()){createBtn.disabled=false;setStatus("авторизация есть");}else{createBtn.disabled=true;setStatus("ожидает авторизации…");}
-    authBtn.addEventListener("click",authorize);createBtn.addEventListener("click",createBoard);logoutBtn.addEventListener("click",logout);
-  })();
-</script>
+        setStatus("готово — открываю доску");
+        log("🚀 Открываю доску…");
+        window.open(board.url, "_blank");
+      } catch (err) {
+        setStatus("ошибка");
+        log("❌ Ошибка: " + (err && err.message ? err.message : err));
+        alert("Ошибка: " + (err && err.message ? err.message : err));
+      }
+    }
+
+    (function init() {
+      const tokenFromHash = extractTokenFromHash();
+      if (tokenFromHash) { setToken(tokenFromHash); scrubHash(); log("🔐 Токен сохранён."); }
+      if (getToken()) { createBtn.disabled = false; setStatus("авторизация есть — можно создавать доску"); }
+      else { createBtn.disabled = true; setStatus("ожидает авторизации…"); }
+      authBtn.addEventListener("click", authorize);
+      createBtn.addEventListener("click", createBoard);
+      logoutBtn.addEventListener("click", logout);
+      log("ℹ️ Если ошибка при авторизации — проверьте Trello ➜ Allowed origins и добавьте: " + location.origin);
+    })();
+  </script>
 </body>
 </html>
