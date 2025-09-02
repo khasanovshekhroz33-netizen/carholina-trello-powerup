@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Carholina OneClick Test</title>
+</head>
+<body>
+  <h1>Carholina OneClick Test</h1>
+  <button onclick="createBoard()">Создать доску</button>
+  <pre id="log"></pre>
+  <script>
+    const API_KEY = "f0459a9c4c84226e29b03e7d047b9dfb";
+    const TOKEN   = "ВАШ_ТОКЕН_СЮДА";
+    const BOARD_JSON_URL = "Carholina_Trello_Board.json";
+
+    const log = (msg) => document.getElementById("log").textContent += msg + "\n";
+
+    async function req(url, options) {
+      const res = await fetch(url, options);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || res.statusText);
+      return data;
+    }
+
+    async function createBoard() {
+      log("Загружаем JSON шаблон…");
+      const template = await (await fetch(BOARD_JSON_URL)).json();
+
+      log("Создаём доску…");
+      const board = await req(\`https://api.trello.com/1/boards/?name=\${encodeURIComponent(template.board.name)}&defaultLists=false&key=\${API_KEY}&token=\${TOKEN}\`, { method: "POST" });
+
+      for (const list of template.board.lists) {
+        const createdList = await req(\`https://api.trello.com/1/lists?name=\${encodeURIComponent(list.name)}&idBoard=\${board.id}&key=\${API_KEY}&token=\${TOKEN}\`, { method: "POST" });
+        for (const card of list.cards || []) {
+          const createdCard = await req(\`https://api.trello.com/1/cards?idList=\${createdList.id}&name=\${encodeURIComponent(card.name)}&desc=\${encodeURIComponent(card.desc)}&key=\${API_KEY}&token=\${TOKEN}\`, { method: "POST" });
+          for (const checklist of card.checklists || []) {
+            const createdChecklist = await req(\`https://api.trello.com/1/cards/\${createdCard.id}/checklists?name=\${encodeURIComponent(checklist.name)}&key=\${API_KEY}&token=\${TOKEN}\`, { method: "POST" });
+            for (const item of checklist.items) {
+              await req(\`https://api.trello.com/1/checklists/\${createdChecklist.id}/checkItems?name=\${encodeURIComponent(item)}&key=\${API_KEY}&token=\${TOKEN}\`, { method: "POST" });
+            }
+          }
+        }
+      }
+
+      log("Готово! Доска создана.");
+    }
+  </script>
+</body>
+</html>
